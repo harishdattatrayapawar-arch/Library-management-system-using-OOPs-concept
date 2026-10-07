@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Library Management System</title>
+<style>
+:root{--bg:#f5f6f8;--card:#fff;--tx:#1b1f24;--mu:#667085;--ac:#2f5bea;--bd:#e3e6ea;--ok:#157f4b;--er:#c0362c;--wn:#b26a00;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14161a;--card:#1d2026;--tx:#e8eaed;--mu:#98a2b3;--ac:#7c9bff;--bd:#2d3139;--ok:#4cc38a;--er:#ff7b72;--wn:#e3a53b}}
+:root[data-theme="dark"]{--bg:#14161a;--card:#1d2026;--tx:#e8eaed;--mu:#98a2b3;--ac:#7c9bff;--bd:#2d3139;--ok:#4cc38a;--er:#ff7b72;--wn:#e3a53b}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+header{padding:20px 16px 8px;max-width:1000px;margin:auto;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+h1{font-size:22px;margin:0}h2{font-size:16px;margin:0 0 10px}
+main{max-width:1000px;margin:auto;padding:8px 16px 40px;display:grid;gap:14px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+input,select,button{font:inherit;padding:7px 10px;border-radius:8px;border:1px solid var(--bd);background:var(--card);color:var(--tx)}
+button{cursor:pointer;background:var(--ac);color:#fff;border:0}
+button.sec{background:transparent;color:var(--ac);border:1px solid var(--ac)}
+button.sm{padding:3px 9px;font-size:13px}
+.tabs button{background:transparent;color:var(--mu);border:1px solid var(--bd)}
+.tabs button.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:640px}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--bd);font-size:14px;vertical-align:top}
+th{color:var(--mu);font-weight:600}
+th[data-sort]{cursor:pointer;user-select:none;white-space:nowrap}th[data-sort]:hover{color:var(--ac)}
+.tag{font-size:12px;padding:1px 8px;border-radius:99px;border:1px solid var(--bd);color:var(--mu)}
+.ok{color:var(--ok)}.bad{color:var(--er)}.warn{color:var(--wn)}
+#msg{padding:10px 14px;border-radius:10px;display:none;border:1px solid var(--bd);background:var(--card)}
+#msg.ok{display:block;border-color:var(--ok)}#msg.err{display:block;border-color:var(--er);color:var(--er)}
+details{font-size:14px;color:var(--mu)}summary{cursor:pointer;color:var(--tx)}
+</style>
+</head>
+<body>
+<header>
+  <h1>📚 Library Management System</h1>
+  <div class="row"><b id="day">Day 1</b><input id="adv" type="number" min="1" value="5" style="width:70px" aria-label="days"><button class="sec" data-act="adv">Advance days</button></div>
+</header>
+<main>
+  <div id="msg" role="status"></div>
+
+  <section class="card">
+    <h2>Issue an item</h2>
+    <div class="row">
+      <select id="selItem" aria-label="item"></select>
+      <select id="selMem" aria-label="member"></select>
+      <input id="custom" type="number" min="0" placeholder="Custom days (optional)" style="width:190px">
+      <button data-act="issue">Issue</button>
+    </div>
+  </section>
+
+  <div class="tabs row">
+    <button data-tab="items" class="on">Catalogue</button>
+    <button data-tab="members">Members</button>
+    <button data-tab="loans">Loans</button>
+  </div>
+
+  <section class="card" id="p-items">
+    <div class="row" style="margin-bottom:10px">
+      <input id="q" placeholder="Search title / author, or a year" style="flex:1;min-width:200px">
+      <select id="tType" aria-label="type"><option value="">All types</option><option>Book</option><option>Magazine</option><option>DVD</option><option>E-Book</option><option>Reference</option></select>
+      <label><input type="checkbox" id="onlyAv"> Available only</label>
+    </div>
+    <div class="scroll"><table id="tItems"></table></div>
+  </section>
+
+  <section class="card" id="p-members" hidden>
+    <div class="row" style="margin-bottom:10px">
+      <input id="mName" placeholder="Name"><input id="mMail" placeholder="Email">
+      <select id="mRole"><option value="Student">Student</option><option value="Faculty">Faculty</option></select>
+      <button data-act="addMember">Register</button>
+    </div>
+    <div class="scroll"><table id="tMembers"></table></div>
+  </section>
+
+  <section class="card" id="p-loans" hidden>
+    <div class="scroll"><table id="tLoans"></table></div>
+  </section>
+
+  <section class="card">
+    <details><summary>OOP concepts used in this site's code</summary>
+      <p><b>Abstraction:</b> <code>LibraryItem</code>, <code>Member</code> cannot be instantiated (<code>new.target</code> check). <b>Encapsulation:</b> private <code>#status</code>, getters. <b>Inheritance:</b> single, multilevel (Book→ReferenceBook), hierarchical (Book/Magazine/DVD), multiple via the <code>Downloadable</code> mixin (EBook). <b>Polymorphism:</b> overridden <code>fine()</code>, <code>loanDays</code>, <code>canIssue</code>, <code>maxItems</code>, <code>fineFactor</code>; <code>search()</code> accepts a string or a year. <b>Static:</b> auto IDs and item count. <b>Composition:</b> <code>Loan</code> has an item and a member. <b>Generics:</b> <code>Repository</code>. <b>Exceptions:</b> <code>NotFoundError</code>, <code>LimitError</code> extend <code>LibraryError</code>. <b>Rules:</b> loan 14/7/3/21 days; limit 3 (student) / 5 (faculty); faculty pay 50% fine; unpaid fine blocks issuing.</p>
+    </details>
+  </section>
+</main>
+
+<script>
+"use strict";
+/* ---------- Exceptions ---------- */
+class LibraryError extends Error {}
+class NotFoundError extends LibraryError { constructor(w){ super(w + " not found."); } }
+class LimitError extends LibraryError {}
+
+/* ---------- Items (abstract base + hierarchy) ---------- */
+class LibraryItem {
+  static #next = 1; static count = 0;           // static members
+  #issued = false;                              // encapsulated state
+  constructor(title, author, year) {
+    if (new.target === LibraryItem) throw new TypeError("LibraryItem is abstract");
+    this.id = LibraryItem.#next++; this.title = title; this.author = author; this.year = year;
+    LibraryItem.count++;
+  }
+  get available() { return !this.#issued; }
+  setIssued(v) { this.#issued = v; }
+  get type() { throw new Error("abstract"); }
+  get loanDays() { throw new Error("abstract"); }
+  fine(days) { throw new Error("abstract"); }
+  get canIssue() { return true; }
+  get details() { return ""; }
+}
+class Book extends LibraryItem {
+  constructor(t, a, y, pages) { super(t, a, y); this.pages = pages; }
+  get type() { return "Book"; } get loanDays() { return 14; }
+  fine(d) { return 2 * d; } get details() { return this.pages + " pages"; }
+}
+class Magazine extends LibraryItem {
+  constructor(t, a, y, no) { super(t, a, y); this.no = no; }
+  get type() { return "Magazine"; } get loanDays() { return 7; }
+  fine(d) { return d; } get details() { return "Issue #" + this.no; }
+}
+class DVD extends LibraryItem {
+  constructor(t, a, y, min) { super(t, a, y); this.min = min; }
+  get type() { return "DVD"; } get loanDays() { return 3; }
+  fine(d) { return Math.min(5 * d, 100); } get details() { return this.min + " min"; }
+}
+class ReferenceBook extends Book {               // multilevel
+  get type() { return "Reference"; } get canIssue() { return false; }
+  get details() { return super.details + ", reading-room only"; }
+}
+const Downloadable = B => class extends B {      // mixin = "multiple inheritance" in JS
+  constructor(...args) { super(...args); }
+  download() { return `Downloading '${this.title}' (${this.sizeMB} MB)…`; }
+};
+class EBook extends Downloadable(Book) {
+  constructor(t, a, y, pages, sizeMB) { super(t, a, y, pages); this.sizeMB = sizeMB; }
+  get type() { return "E-Book"; } get loanDays() { return 21; }
+  fine() { return 0; } get details() { return super.details + ", " + this.sizeMB + " MB"; }
+}
+
+/* ---------- People ---------- */
+class Person { constructor(name, email) { this.name = name; this.email = email; } }
+class Member extends Person {
+  static #next = 101;
+  borrowed = 0; fineDue = 0;
+  constructor(n, e) {
+    super(n, e);
+    if (new.target === Member) throw new TypeError("Member is abstract");
+    this.id = Member.#next++;
+  }
+  get role() { throw new Error("abstract"); }
+  get maxItems() { throw new Error("abstract"); }
+  get fineFactor() { return 1; }
+}
+class Student extends Member { get role() { return "Student"; } get maxItems() { return 3; } }
+class Faculty extends Member { get role() { return "Faculty"; } get maxItems() { return 5; } get fineFactor() { return 0.5; } }
+
+/* ---------- Composition ---------- */
+class Loan {
+  static #n = 0;
+  active = true;
+  constructor(item, member, today, period) {     // Loan HAS-A item and member
+    this.id = ++Loan.#n; this.item = item; this.member = member; this.due = today + period;
+  }
+}
+
+/* ---------- Generic repository ---------- */
+class Repository {
+  #list = [];
+  add(x) { this.#list.push(x); return x; }
+  find(id, label) { const x = this.#list.find(i => i.id === id); if (!x) throw new NotFoundError(label + " #" + id); return x; }
+  get all() { return [...this.#list]; }
+}
+
+/* ---------- Controller ---------- */
+class Library {
+  items = new Repository(); members = new Repository(); loans = []; today = 1;
+  issue(itemId, memberId, custom = 0) {
+    const it = this.items.find(itemId, "Item"), m = this.members.find(memberId, "Member");
+    if (!it.canIssue) throw new LibraryError(`'${it.title}' is for reading-room use only.`);
+    if (!it.available) throw new LibraryError(`'${it.title}' is not available.`);
+    if (m.fineDue > 0) throw new LibraryError(`${m.name} must clear a fine of Rs.${m.fineDue.toFixed(2)} first.`);
+    if (m.borrowed >= m.maxItems) throw new LimitError(`${m.name} reached the limit of ${m.maxItems} items.`);
+    const l = new Loan(it, m, this.today, custom > 0 ? custom : it.loanDays);
+    it.setIssued(true); m.borrowed++; this.loans.push(l);
+    return `Issued '${it.title}' to ${m.name}. Due on Day ${l.due}.`;
+  }
+  giveBack(loanId) {
+    const l = this.loans.find(x => x.id === loanId);
+    if (!l) throw new NotFoundError("Loan #" + loanId);
+    if (!l.active) throw new LibraryError("Already returned.");
+    const late = Math.max(0, this.today - l.due);
+    l.active = false; l.item.setIssued(false); l.member.borrowed--;
+    let msg = `'${l.item.title}' returned.`;
+    if (late > 0) {                               // polymorphic fine: item rule x member rule
+      const f = l.item.fine(late) * l.member.fineFactor;
+      l.member.fineDue += f; msg += ` Late by ${late} day(s). Fine Rs.${f.toFixed(2)}.`;
+    } else msg += " On time, no fine.";
+    return msg;
+  }
+  payFine(id) { const m = this.members.find(id, "Member"); const a = m.fineDue; m.fineDue = 0; return `Rs.${a.toFixed(2)} collected from ${m.name}.`; }
+  search(q) {                                     // overloading emulated: number = year, string = text
+    if (typeof q === "number") return this.items.all.filter(i => i.year === q);
+    q = q.toLowerCase(); return this.items.all.filter(i => (i.title + " " + i.author).toLowerCase().includes(q));
+  }
+  advance(n) { if (!(n > 0)) throw new LibraryError("Days must be positive."); this.today += n; return `Calendar moved to Day ${this.today}.`; }
+}
+
+/* ---------- Seed data ---------- */
+const lib = new Library();
+[new Book("The C++ Programming Language", "B. Stroustrup", 2013, 1376), new Book("Wings of Fire", "A.P.J. Abdul Kalam", 1999, 180),
+ new Book("Clean Code", "Robert C. Martin", 2008, 464), new Magazine("National Geographic", "NatGeo Society", 2024, 312),
+ new DVD("Cosmos", "Carl Sagan", 1980, 780), new ReferenceBook("Oxford English Dictionary", "Oxford Press", 2010, 2000),
+ new EBook("Design Patterns", "Gamma et al.", 1994, 395, 12.5),
+ new Book("Introduction to Algorithms", "T. H. Cormen", 2009, 1312), new Book("Let Us C", "Yashavant Kanetkar", 2016, 400),
+ new Book("The Pragmatic Programmer", "Hunt & Thomas", 1999, 352), new Book("Operating System Concepts", "A. Silberschatz", 2018, 1278),
+ new Book("Database System Concepts", "A. Silberschatz", 2019, 1376), new Book("Computer Networks", "Andrew Tanenbaum", 2010, 960),
+ new Book("Artificial Intelligence: A Modern Approach", "Russell & Norvig", 2020, 1136),
+ new Book("The Discovery of India", "Jawaharlal Nehru", 1946, 600), new Book("Gitanjali", "Rabindranath Tagore", 1910, 104),
+ new Book("Malgudi Days", "R. K. Narayan", 1943, 224), new Book("The Guide", "R. K. Narayan", 1958, 220),
+ new Book("Godan", "Premchand", 1936, 344), new Book("Atomic Habits", "James Clear", 2018, 320),
+ new Book("The Alchemist", "Paulo Coelho", 1988, 208), new Book("Sapiens", "Yuval Noah Harari", 2011, 443),
+ new Book("A Brief History of Time", "Stephen Hawking", 1988, 256),
+ new Magazine("India Today", "Living Media", 2024, 41), new DVD("Inception", "Christopher Nolan", 2010, 148),
+ new EBook("Automate the Boring Stuff", "Al Sweigart", 2019, 592, 8.2),
+ new ReferenceBook("Encyclopaedia Britannica", "Britannica Inc.", 2010, 3000)].forEach(i => lib.items.add(i));
+lib.members.add(new Student("Rahul Patil", "rahul@college.edu"));
+lib.members.add(new Faculty("Dr. Meera Rao", "meera@college.edu"));
+
+/* ---------- UI ---------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+function toast(text, ok) { const m = $("#msg"); m.textContent = text; m.className = ok ? "ok" : "err"; }
+
+let sortKey = "id", sortDir = 1;                 // current catalogue sort
+const COLS = [["id", "ID"], ["type", "Type"], ["title", "Title"], ["author", "Author"], ["year", "Year"], ["details", "Details"], ["status", "Status"]];
+const val = (i, k) => k === "status" ? (i.available ? 0 : 1) : i[k];
+const heads = () => "<tr>" + COLS.map(([k, l]) => `<th data-sort="${k}" title="Click to sort by ${l}">${l}${sortKey === k ? (sortDir > 0 ? " ▲" : " ▼") : ""}</th>`).join("") + "<th></th></tr>";
+
+function render() {
+  $("#day").textContent = "Day " + lib.today;
+  const q = $("#q").value.trim();
+  let list = !q ? lib.items.all : (/^\d{4}$/.test(q) ? lib.search(+q) : lib.search(q));
+  if ($("#onlyAv").checked) list = list.filter(i => i.available);
+  if ($("#tType").value) list = list.filter(i => i.type === $("#tType").value);
+  list.sort((a, b) => {
+    const x = val(a, sortKey), y = val(b, sortKey);
+    return (typeof x === "number" && typeof y === "number" ? x - y : String(x).localeCompare(String(y), undefined, { numeric: true })) * sortDir || a.id - b.id;
+  });
+  $("#tItems").innerHTML = heads() +
+    list.map(i => `<tr><td>${i.id}</td><td><span class="tag">${i.type}</span></td><td>${esc(i.title)}</td><td>${esc(i.author)}</td><td>${i.year}</td><td>${esc(i.details)}</td>
+    <td class="${i.available ? "ok" : "warn"}">${i.available ? "Available" : "Issued"}</td>
+    <td>${typeof i.download === "function" ? `<button class="sm sec" data-act="dl" data-id="${i.id}">Download</button>` : ""}</td></tr>`).join("");
+  $("#tMembers").innerHTML = "<tr><th>ID</th><th>Name</th><th>Role</th><th>Borrowed</th><th>Fine due</th><th></th></tr>" +
+    lib.members.all.map(m => `<tr><td>${m.id}</td><td>${esc(m.name)}</td><td><span class="tag">${m.role}</span></td><td>${m.borrowed}/${m.maxItems}</td>
+    <td class="${m.fineDue > 0 ? "bad" : ""}">Rs.${m.fineDue.toFixed(2)}</td><td>${m.fineDue > 0 ? `<button class="sm" data-act="pay" data-id="${m.id}">Pay fine</button>` : ""}</td></tr>`).join("");
+  $("#tLoans").innerHTML = "<tr><th>Loan</th><th>Item</th><th>Member</th><th>Due</th><th>Status</th><th></th></tr>" +
+    (lib.loans.length ? lib.loans.map(l => `<tr><td>${l.id}</td><td>${esc(l.item.title)}</td><td>${esc(l.member.name)}</td><td>Day ${l.due}</td>
+    <td class="${!l.active ? "" : lib.today > l.due ? "bad" : "ok"}">${!l.active ? "Returned" : lib.today > l.due ? "OVERDUE" : "Active"}</td>
+    <td>${l.active ? `<button class="sm" data-act="ret" data-id="${l.id}">Return</button>` : ""}</td></tr>`).join("") : "<tr><td colspan=6>No loans yet.</td></tr>");
+  const si = $("#selItem").value, sm = $("#selMem").value;
+  $("#selItem").innerHTML = lib.items.all.map(i => `<option value="${i.id}">#${i.id} ${esc(i.title)}</option>`).join("");
+  $("#selMem").innerHTML = lib.members.all.map(m => `<option value="${m.id}">#${m.id} ${esc(m.name)} (${m.role})</option>`).join("");
+  if (si) $("#selItem").value = si; if (sm) $("#selMem").value = sm;
+}
+
+function run(fn) {                                // try / catch around every action
+  try { toast(fn(), true); }
+  catch (e) { toast((e instanceof NotFoundError ? "Not found: " : e instanceof LimitError ? "Limit: " : "Error: ") + e.message, false); }
+  render();
+}
+
+document.addEventListener("click", e => {
+  const s = e.target.closest("[data-sort]");
+  if (s) {                                        // same column again = reverse order
+    sortDir = sortKey === s.dataset.sort ? -sortDir : 1;
+    sortKey = s.dataset.sort; render(); return;
+  }
+  const t = e.target.closest("[data-tab]");
+  if (t) {
+    document.querySelectorAll("[data-tab]").forEach(b => b.classList.toggle("on", b === t));
+    ["items", "members", "loans"].forEach(n => $("#p-" + n).hidden = n !== t.dataset.tab);
+    return;
+  }
+  const b = e.target.closest("[data-act]"); if (!b) return;
+  const id = +b.dataset.id;
+  switch (b.dataset.act) {
+    case "issue": run(() => lib.issue(+$("#selItem").value, +$("#selMem").value, +$("#custom").value || 0)); break;
+    case "ret": run(() => lib.giveBack(id)); break;
+    case "pay": run(() => lib.payFine(id)); break;
+    case "adv": run(() => lib.advance(+$("#adv").value)); break;
+    case "dl": run(() => lib.items.find(id, "Item").download()); break;
+    case "addMember": run(() => {
+      const n = $("#mName").value.trim(); if (!n) throw new LibraryError("Name is required.");
+      const m = lib.members.add($("#mRole").value === "Faculty" ? new Faculty(n, $("#mMail").value) : new Student(n, $("#mMail").value));
+      $("#mName").value = $("#mMail").value = ""; return `Registered ${m.role} ${m.name} with ID ${m.id}.`;
+    }); break;
+  }
+});
+$("#q").addEventListener("input", render);
+$("#onlyAv").addEventListener("change", render);
+$("#tType").addEventListener("change", render);
+render();
+</script>
+</body>
+</html>
